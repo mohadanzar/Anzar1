@@ -37,6 +37,30 @@ const countries = [
   { name: 'Istanbul', country: 'Turkey', timezone: 'Europe/Istanbul' },
 ];
 
+const timezoneAbbr: { [key: string]: string } = {
+  'Asia/Kolkata': 'IST',
+  'America/New_York': 'EST',
+  'Europe/London': 'BST',
+  'Asia/Tokyo': 'JST',
+  'Australia/Sydney': 'AEST',
+  'Europe/Paris': 'CEST',
+  'Asia/Dubai': 'GST',
+  'Asia/Singapore': 'SGT',
+  'America/Los_Angeles': 'PST',
+  'Europe/Berlin': 'CEST',
+  'Asia/Hong_Kong': 'HKT',
+  'Europe/Moscow': 'MSK',
+  'America/Sao_Paulo': 'BRT',
+  'Africa/Cairo': 'EET',
+  'Asia/Bangkok': 'ICT',
+  'America/Vancouver': 'PST',
+  'America/Mexico_City': 'CST',
+  'America/Argentina/Buenos_Aires': 'ART',
+  'Africa/Lagos': 'WAT',
+  'Europe/Istanbul': 'TRT',
+  // Add more as needed
+};
+
 function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLocation, setSelectedLocation] = useState(countries[0]);
@@ -44,6 +68,16 @@ function App() {
   const [filteredCountries, setFilteredCountries] = useState(countries);
   const [isLiveMode, setIsLiveMode] = useState(true);
   const [selectedDateTime, setSelectedDateTime] = useState('');
+  const [selectedISTDateTime, setSelectedISTDateTime] = useState('');
+  const [reverseMode, setReverseMode] = useState(false);
+
+  const cityInputDT = selectedDateTime
+    ? DateTime.fromISO(selectedDateTime, { zone: selectedLocation.timezone })
+    : null;
+
+  const cityToIST = cityInputDT
+    ? cityInputDT.setZone('Asia/Kolkata')
+    : null;
 
   const getTimeAndDateForTimezone = (timezone: string, customDateTime?: Date) => {
     const targetDate = customDateTime || new Date();
@@ -102,14 +136,6 @@ function App() {
     const adjustedDate = new Date(localDate.getTime() - timezoneOffset);
     
     return adjustedDate;
-  };
-
-  const getISTFromCustomInputLuxon = (customInput: string, fromTimezone: string) => {
-    // Parse the input as a time in the selected location's timezone
-    const dt = DateTime.fromISO(customInput, { zone: fromTimezone });
-    // Convert to IST
-    const ist = dt.setZone('Asia/Kolkata');
-    return ist;
   };
 
   const updateTime = () => {
@@ -185,6 +211,14 @@ function App() {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
+  const istInputDT = selectedISTDateTime
+    ? DateTime.fromISO(selectedISTDateTime, { zone: 'Asia/Kolkata' })
+    : null;
+
+  const convertedDT = istInputDT
+    ? istInputDT.setZone(selectedLocation.timezone)
+    : null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 overflow-x-hidden">
       {/* Header */}
@@ -245,7 +279,7 @@ function App() {
                       Custom Date/Time
                     </button>
                   </div>
-                  {!isLiveMode && (
+                  {!isLiveMode && !reverseMode && (
                     <div>
                       <label className="block text-white text-sm font-medium mb-2">
                         Enter Date and Time for {selectedLocation.name}:
@@ -257,8 +291,40 @@ function App() {
                         className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                       />
                       <p className="text-white/70 text-xs mt-2">
-                        Enter the local date and time for <span className="font-semibold">{selectedLocation.name}</span>, and it will be converted to Delhi time
+                        Enter the local date and time for <span className="font-semibold">{selectedLocation.name}</span>, and it will be converted to Indian (IST) time
                       </p>
+                    </div>
+                  )}
+                  {!isLiveMode && reverseMode && (
+                    <div>
+                      <label className="block text-white text-sm font-medium mb-2">
+                        Enter Date and Time for Indian (IST):
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={selectedISTDateTime}
+                        onChange={e => setSelectedISTDateTime(e.target.value)}
+                        className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                      />
+                      <p className="text-white/70 text-xs mt-2">
+                        Enter the local date and time for <span className="font-semibold">Indian (IST)</span>, and it will be converted to {selectedLocation.name} time
+                      </p>
+                    </div>
+                  )}
+                  {!isLiveMode && (
+                    <div className="flex items-center space-x-2 mb-4">
+                      <button
+                        className={`px-4 py-2 rounded-lg ${!reverseMode ? 'bg-blue-500 text-white' : 'bg-white/20 text-white'}`}
+                        onClick={() => setReverseMode(false)}
+                      >
+                        {timezoneAbbr[selectedLocation.timezone] || selectedLocation.timezone} → IST
+                      </button>
+                      <button
+                        className={`px-4 py-2 rounded-lg ${reverseMode ? 'bg-blue-500 text-white' : 'bg-white/20 text-white'}`}
+                        onClick={() => setReverseMode(true)}
+                      >
+                        IST → {timezoneAbbr[selectedLocation.timezone] || selectedLocation.timezone}
+                      </button>
                     </div>
                   )}
                 </div>
@@ -366,85 +432,142 @@ function App() {
                   )}
                 </div>
                 
-                {/* Selected Location Time */}
-                <div className="bg-gradient-to-r from-blue-500/20 to-emerald-500/20 rounded-xl p-6 mb-6 border border-blue-400/30">
-                  <div className="flex items-center mb-3">
-                    <MapPin className="h-5 w-5 text-blue-300 mr-2" />
-                    <h3 className="text-lg font-semibold text-white">
-                      {currentTime.city}, {currentTime.country}
-                    </h3>
-                    {!isLiveMode && (
-                      <div className="ml-auto bg-blue-500/30 px-2 py-1 rounded text-xs text-blue-200">
-                        INPUT TIME
+                {isLiveMode ? (
+                  <>
+                    {/* Input: Selected City (Live) */}
+                    <div className="bg-gradient-to-r from-blue-500/20 to-emerald-500/20 rounded-xl p-6 mb-6 border border-blue-400/30">
+                      <div className="flex items-center mb-3">
+                        <MapPin className="h-5 w-5 text-blue-300 mr-2" />
+                        <h3 className="text-lg font-semibold text-white">
+                          {selectedLocation.name}, {selectedLocation.country}
+                        </h3>
+                        <div className="ml-auto bg-blue-500/30 px-2 py-1 rounded text-xs text-blue-200">
+                          LIVE TIME
+                        </div>
                       </div>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-3xl font-bold text-white">
-                      {isLiveMode
-                        ? currentTime.time
-                        : selectedDateTime
-                          ? new Date(selectedDateTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-                          : currentTime.time}
-                    </p>
-                    <div className="flex items-center text-blue-200">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      <span className="text-lg">
-                        {isLiveMode
-                          ? currentTime.date
-                          : selectedDateTime
-                            ? new Date(selectedDateTime).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-                            : currentTime.date}
-                      </span>
-                    </div>
-                    <p className="text-sm text-blue-300">Timezone: {currentTime.timezone}</p>
-                  </div>
-                  {/* Show custom input date/time below the main card if in custom mode */}
-                  {!isLiveMode && selectedDateTime && (
-                    <div className="mt-4 p-2 bg-blue-900/40 rounded text-blue-100 text-sm text-center border border-blue-400/20 font-bold">
-                      Input Date & Time: {new Date(selectedDateTime).toLocaleString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Delhi Time */}
-                <div className="bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-xl p-6 border border-emerald-400/30">
-                  <div className="flex items-center mb-3">
-                    <Clock className="h-5 w-5 text-emerald-300 mr-2" />
-                    <h3 className="text-lg font-semibold text-white">Delhi, India (IST)</h3>
-                    {!isLiveMode && (
-                      <div className="ml-auto bg-emerald-500/30 px-2 py-1 rounded text-xs text-emerald-200">
-                        CONVERTED TIME
+                      <div className="space-y-2">
+                        <p className="text-3xl font-bold text-white">{currentTime?.time}</p>
+                        <div className="flex items-center text-blue-200 mt-1">
+                          <Calendar className="h-4 w-4 mr-2" />
+                          <span className="text-lg">{currentTime?.date}</span>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-3xl font-bold text-white">
-                      {isLiveMode
-                        ? currentTime.delhiTime
-                        : selectedDateTime
-                          ? (() => {
-                              const istDate = getISTFromCustomInputLuxon(selectedDateTime, selectedLocation.timezone);
-                              return istDate.toLocaleString({ hour: '2-digit', minute: '2-digit', hour12: true });
-                            })()
-                          : currentTime.delhiTime}
-                    </p>
-                    <div className="flex items-center text-emerald-200">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      <span className="text-lg">
-                        {isLiveMode
-                          ? currentTime.delhiDate
-                          : selectedDateTime
-                            ? (() => {
-                                const istDate = getISTFromCustomInputLuxon(selectedDateTime, selectedLocation.timezone);
-                                return istDate.toLocaleString({ weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-                              })()
-                            : currentTime.delhiDate}
-                      </span>
+                      <p className="text-sm text-blue-300">Timezone: {selectedLocation.timezone}</p>
                     </div>
-                    <p className="text-sm text-emerald-300">Indian Standard Time (UTC+5:30)</p>
-                  </div>
-                </div>
+                    {/* Converted: IST (Live) */}
+                    <div className="bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-xl p-6 mb-6 border border-emerald-400/30">
+                      <div className="flex items-center mb-3">
+                        <Clock className="h-5 w-5 text-emerald-300 mr-2" />
+                        <h3 className="text-lg font-semibold text-white">Delhi, India (IST)</h3>
+                        <div className="ml-auto bg-emerald-500/30 px-2 py-1 rounded text-xs text-emerald-200">LIVE TIME</div>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-3xl font-bold text-white">{currentTime?.delhiTime}</p>
+                        <div className="flex items-center text-emerald-200 mt-1">
+                          <Calendar className="h-4 w-4 mr-2" />
+                          <span className="text-lg">{currentTime?.delhiDate}</span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-emerald-300">Indian Standard Time (UTC+5:30)</p>
+                    </div>
+                  </>
+                ) : (
+                  reverseMode ? (
+                    <>
+                      {/* Input: IST */}
+                      <div className="bg-gradient-to-r from-blue-500/20 to-emerald-500/20 rounded-xl p-6 mb-6 border border-blue-400/30">
+                        <div className="flex items-center mb-3">
+                          <MapPin className="h-5 w-5 text-blue-300 mr-2" />
+                          <h3 className="text-lg font-semibold text-white">Delhi, India (IST)</h3>
+                          <div className="ml-auto bg-blue-500/30 px-2 py-1 rounded text-xs text-blue-200">
+                            INPUT TIME
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-3xl font-bold text-white">
+                            {istInputDT ? istInputDT.toLocaleString(DateTime.TIME_SIMPLE) : '--'}
+                          </p>
+                          <div className="flex items-center text-blue-200 mt-1">
+                            <Calendar className="h-4 w-4 mr-2" />
+                            <span className="text-lg">
+                              {istInputDT ? istInputDT.toLocaleString(DateTime.DATE_FULL) : ''}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-blue-300">Timezone: {selectedLocation.timezone}</p>
+                      </div>
+                      {/* Converted: Selected City */}
+                      <div className="bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-xl p-6 mb-6 border border-emerald-400/30">
+                        <div className="flex items-center mb-3">
+                          <Clock className="h-5 w-5 text-emerald-300 mr-2" />
+                          <h3 className="text-lg font-semibold text-white">
+                            {selectedLocation.name}, {selectedLocation.country}
+                          </h3>
+                          <div className="ml-auto bg-emerald-500/30 px-2 py-1 rounded text-xs text-emerald-200">CONVERTED TIME</div>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-3xl font-bold text-white">
+                            {convertedDT ? convertedDT.toLocaleString(DateTime.TIME_SIMPLE) : '--'}
+                          </p>
+                          <div className="flex items-center text-emerald-200 mt-1">
+                            <Calendar className="h-4 w-4 mr-2" />
+                            <span className="text-lg">
+                              {convertedDT ? convertedDT.toLocaleString(DateTime.DATE_FULL) : ''}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-emerald-300">Timezone: {selectedLocation.timezone}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Input: Selected City */}
+                      <div className="bg-gradient-to-r from-blue-500/20 to-emerald-500/20 rounded-xl p-6 mb-6 border border-blue-400/30">
+                        <div className="flex items-center mb-3">
+                          <MapPin className="h-5 w-5 text-blue-300 mr-2" />
+                          <h3 className="text-lg font-semibold text-white">
+                            {selectedLocation.name}, {selectedLocation.country}
+                          </h3>
+                          <div className="ml-auto bg-blue-500/30 px-2 py-1 rounded text-xs text-blue-200">
+                            INPUT TIME
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-3xl font-bold text-white">
+                            {cityInputDT ? cityInputDT.toLocaleString(DateTime.TIME_SIMPLE) : '--'}
+                          </p>
+                          <div className="flex items-center text-blue-200 mt-1">
+                            <Calendar className="h-4 w-4 mr-2" />
+                            <span className="text-lg">
+                              {cityInputDT ? cityInputDT.toLocaleString(DateTime.DATE_FULL) : ''}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-blue-300">Timezone: {selectedLocation.timezone}</p>
+                      </div>
+                      {/* Converted: IST */}
+                      <div className="bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-xl p-6 mb-6 border border-emerald-400/30">
+                        <div className="flex items-center mb-3">
+                          <Clock className="h-5 w-5 text-emerald-300 mr-2" />
+                          <h3 className="text-lg font-semibold text-white">Delhi, India (IST)</h3>
+                          <div className="ml-auto bg-emerald-500/30 px-2 py-1 rounded text-xs text-emerald-200">CONVERTED TIME</div>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-3xl font-bold text-white">
+                            {cityToIST ? cityToIST.toLocaleString(DateTime.TIME_SIMPLE) : '--'}
+                          </p>
+                          <div className="flex items-center text-emerald-200 mt-1">
+                            <Calendar className="h-4 w-4 mr-2" />
+                            <span className="text-lg">
+                              {cityToIST ? cityToIST.toLocaleString(DateTime.DATE_FULL) : ''}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-emerald-300">Indian Standard Time (UTC+5:30)</p>
+                      </div>
+                    </>
+                  )
+                )}
 
                 {/* Day Difference Indicator */}
                 <div className="mt-4 p-4 bg-yellow-500/20 border border-yellow-400/30 rounded-xl">
