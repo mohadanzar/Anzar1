@@ -196,7 +196,7 @@ function App() {
                 <img src={logo} alt="Logo" className="h-10 w-10" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">Colan InfoTech</h1>
+                <h1 className="text-2xl font-bold text-white">Colan Infotech</h1>
                 <p className="text-blue-200 text-sm">World Clock & Time Converter</p>
               </div>
             </div>
