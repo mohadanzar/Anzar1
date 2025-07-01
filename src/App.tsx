@@ -380,7 +380,7 @@ function App() {
           <div className="flex items-center justify-center">
             <div className="relative">
               {/* Globe Container */}
-              <div className="relative w-full aspect-square max-w-[180px] sm:max-w-xs md:max-w-sm lg:max-w-md mx-auto">
+              <div className="relative w-96 h-96 max-w-md mx-auto">
                 {/* Outer Ring */}
                 <div className="absolute inset-0 rounded-full border-2 border-blue-400/30 animate-spin-slow"></div>
                 
